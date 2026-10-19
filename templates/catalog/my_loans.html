@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}My loans{% endblock %}
+{% block content %}
+<h1>My loans</h1>
+<h2>On loan now</h2>
+{% if active %}
+<table>
+  <thead><tr><th>Book</th><th>Borrowed</th><th>Due</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for loan in active %}
+    <tr>
+      <td><a href="{% url 'catalog:book_detail' loan.book.pk %}">{{ loan.book.title }}</a></td>
+      <td>{{ loan.borrowed_at|date:"d M Y" }}</td>
+      <td>{{ loan.due_date|date:"d M Y" }}</td>
+      <td>{% if loan.is_overdue %}<span class="late">{{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }} late · fine {{ loan.fine }}</span>{% else %}On time{% endif %}</td>
+      <td><form method="post" action="{% url 'catalog:return_book' loan.pk %}">{% csrf_token %}<button class="btn small" type="submit">Return</button></form></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="empty">Nothing borrowed. <a href="{% url 'catalog:book_list' %}">Browse the catalogue</a>.</p>{% endif %}
+
+<h2>History</h2>
+{% if history %}
+<table>
+  <thead><tr><th>Book</th><th>Borrowed</th><th>Returned</th><th>Fine</th></tr></thead>
+  <tbody>{% for loan in history %}<tr><td>{{ loan.book.title }}</td><td>{{ loan.borrowed_at|date:"d M Y" }}</td><td>{{ loan.returned_at|date:"d M Y" }}</td><td>{{ loan.fine }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}<p class="empty">Returned books will appear here.</p>{% endif %}
+{% endblock %}

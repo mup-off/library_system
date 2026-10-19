@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+<article class="detail" style="--h: {{ book.category_id|default:0 }}">
+  <div class="spine big" aria-hidden="true"></div>
+  <div>
+    <h1>{{ book.title }}</h1>
+    <p class="meta">{% for a in book.authors.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    <dl>
+      <dt>ISBN</dt><dd>{{ book.isbn }}</dd>
+      {% if book.category %}<dt>Category</dt><dd>{{ book.category.name }}</dd>{% endif %}
+      {% if book.published_year %}<dt>Published</dt><dd>{{ book.published_year }}</dd>{% endif %}
+      <dt>Availability</dt><dd>{{ book.available_copies }} of {{ book.total_copies }} copies</dd>
+    </dl>
+    {% if book.description %}<p>{{ book.description }}</p>{% endif %}
+    {% if has_loan %}
+      <p class="empty">You have this book on loan. <a href="{% url 'catalog:my_loans' %}">View my loans</a></p>
+    {% elif book.is_available %}
+      <form method="post" action="{% url 'catalog:borrow' book.pk %}">{% csrf_token %}<button class="btn" type="submit">Borrow for 14 days</button></form>
+    {% else %}
+      <p class="empty">All copies are out. Check back soon.</p>
+    {% endif %}
+    <p class="aside"><a href="{% url 'catalog:book_list' %}">Back to catalogue</a></p>
+  </div>
+</article>
+{% endblock %}
