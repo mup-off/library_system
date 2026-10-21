@@ -72,9 +72,16 @@ python manage.py createsuperuser         # your librarian/admin account (email +
 python manage.py runserver
 ```
 
-Open http://127.0.0.1:8000. By default emails are **printed to the terminal running `runserver`**
-(console backend), so you read the OTP and reset links there. For real mail, set the `EMAIL_*`
-variables in `.env` to your SMTP provider and `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`.
+Open http://127.0.0.1:8000. The `.env.example` is configured for Gmail SMTP. Before signing in,
+replace `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, and `DEFAULT_FROM_EMAIL` in `.env` with your
+Gmail address, a Google App Password, and that same Gmail address. To create an App Password,
+enable 2-Step Verification on your Google Account, then create an App Password in your account's
+security settings. Use the generated password (without spaces), not your normal Gmail password.
+The sign-in code is sent to the email address on the account; Gmail is the sending account.
+
+Keep `.env` private and never commit your App Password. To use the development console instead,
+set `EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend`; emails will be printed to the
+terminal running `runserver`.
 
 Troubleshooting: `connection refused` means PostgreSQL isn't running; `password authentication failed`
 means `.env` doesn't match the password in `create_db.sql`.
@@ -92,7 +99,8 @@ The DB user needs `CREATEDB` (Django creates a throwaway `test_library` database
 1. **Register**: `/accounts/register/`. Try a weak password (`password123`): it is rejected. Use a strong one.
 2. **Password step**: sign in at `/accounts/login/`. You land on "Check your email", **not** logged in yet.
    Visiting `/` or `/loans/` still bounces you to the login page.
-3. **OTP step**: copy the 6-digit code from the `runserver` terminal and submit it. You're now signed in.
+3. **OTP step**: copy the 6-digit code from your email inbox (or the `runserver` terminal when using
+   the console email backend) and submit it. You're now signed in.
    - Try a wrong code 5 times: the code is burned and you must sign in again.
    - Wait 5 minutes (or reuse an old code): rejected. A used code can't be used twice.
    - "Send a new code" is rate-limited to once per 30 s; a new code invalidates the old one.
