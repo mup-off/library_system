@@ -71,26 +71,8 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.locked_until = timezone.now() + timedelta(minutes=settings.LOGIN_LOCKOUT_MINUTES)
             self.failed_login_attempts = 0
         self.save(update_fields=["failed_login_attempts", "locked_until"])
-
     def reset_login_failures(self):
         if self.failed_login_attempts or self.locked_until:
             self.failed_login_attempts = 0
             self.locked_until = None
             self.save(update_fields=["failed_login_attempts", "locked_until"])
-
-
-class EmailOTP(models.Model):
-    """One-time code for the second login factor. Only an HMAC of the code is stored."""
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="otps")
-    code_hash = models.CharField(max_length=64)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-    attempts = models.PositiveSmallIntegerField(default=0)
-    consumed_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        indexes = [models.Index(fields=["user", "-created_at"])]
-
-    def __str__(self):
-        return f"OTP for {self.user_id} @ {self.created_at:%Y-%m-%d %H:%M:%S}"

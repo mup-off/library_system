@@ -1,37 +1,101 @@
 {% extends "base.html" %}
-{% block title %}Catalogue{% endblock %}
+{% load static %}
+{% block title %}Discover books{% endblock %}
 {% block content %}
-<h1>Catalogue</h1>
-<form method="get" class="filters">
-  <input type="search" name="q" value="{{ q }}" placeholder="Title, author or ISBN" aria-label="Search books" maxlength="100">
-  <select name="category" aria-label="Category">
-    <option value="">All categories</option>
-    {% for c in categories %}<option value="{{ c.id }}" {% if selected_category == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
-  </select>
-  <button class="btn" type="submit">Search</button>
-</form>
+<section class="welcome-banner" aria-labelledby="welcome-title">
+  <div class="welcome-copy">
+    <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true">✳</span> YOUR NEXT CHAPTER STARTS HERE</p>
+    <h1 id="welcome-title">A good book<br>changes <em>everything.</em></h1>
+    <p class="welcome-text">Find a new perspective, revisit an old favorite, or wander somewhere entirely unexpected.</p>
+    <a class="welcome-link" href="#discover">Find your next read <span aria-hidden="true">↓</span></a>
+  </div>
+  <div class="welcome-art">
+    <img src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&amp;fit=crop&amp;w=1100&amp;q=85" alt="Sunlit library shelves filled with books" fetchpriority="high">
+    <div class="art-caption"><span class="caption-dot" aria-hidden="true"></span><span>A little room for wonder</span></div>
+    <span class="art-stamp" aria-hidden="true">READ<br>MORE</span>
+  </div>
+</section>
 
-{% if page.object_list %}
-<ul class="shelf">
-  {% for book in page %}
-  <li class="book" style="--h: {{ book.category_id|default:0 }}">
-    <a class="spine" href="{% url 'catalog:book_detail' book.pk %}" aria-hidden="true" tabindex="-1"></a>
+<section class="discovery" id="discover" aria-labelledby="discover-title">
+  <div class="section-heading">
     <div>
-      <h2><a href="{% url 'catalog:book_detail' book.pk %}">{{ book.title }}</a></h2>
-      <p class="meta">{% for a in book.authors.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if book.category %} — {{ book.category.name }}{% endif %}</p>
+      <p class="eyebrow">THE COLLECTION</p>
+      <h2 id="discover-title">Find your kind of story</h2>
+      <p class="section-intro">A whole world of ideas, waiting on the shelf.</p>
     </div>
-    <span class="stock {% if book.is_available %}in{% else %}out{% endif %}">
-      {% if book.is_available %}{{ book.available_copies }} of {{ book.total_copies }} on the shelf{% else %}All copies out{% endif %}
-    </span>
-  </li>
-  {% endfor %}
-</ul>
-<nav class="pager" aria-label="Pages">
-  {% if page.has_previous %}<a href="?q={{ q|urlencode }}&category={{ selected_category }}&page={{ page.previous_page_number }}">Previous</a>{% endif %}
-  <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-  {% if page.has_next %}<a href="?q={{ q|urlencode }}&category={{ selected_category }}&page={{ page.next_page_number }}">Next</a>{% endif %}
-</nav>
-{% else %}
-  <p class="empty">No books match that search. Try a shorter title or clear the category filter.</p>
-{% endif %}
+    <div class="collection-count" aria-live="polite"><strong>{{ book_count }}</strong><span>book{{ book_count|pluralize }} to explore</span></div>
+  </div>
+
+  <form method="get" class="catalog-search" role="search">
+    <label class="search-input-wrap">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search by title, author or ISBN…" aria-label="Search books" maxlength="100">
+    </label>
+    <label class="category-select">
+      <span class="visually-hidden">Filter by category</span>
+      <select name="category" aria-label="Category">
+        <option value="">Every shelf</option>
+        {% for c in categories %}<option value="{{ c.id }}" {% if selected_category == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+      <span class="select-chevron" aria-hidden="true">⌄</span>
+    </label>
+    <button class="btn search-button" type="submit">Explore books <span aria-hidden="true">→</span></button>
+  </form>
+
+  <div class="results-toolbar">
+    <p class="results-label">Showing <strong>{{ book_count }}</strong> book{{ book_count|pluralize }}{% if q %} for “{{ q }}”{% endif %}</p>
+    <div class="toolbar-actions">
+      <button class="saved-filter" type="button" data-saved-filter aria-pressed="false"><span aria-hidden="true">♡</span> Saved <span class="saved-count" data-saved-count>0</span></button>
+      <label class="sort-control">Sort
+        <select data-sort aria-label="Sort books">
+          <option value="title">Title A–Z</option>
+          <option value="year">Newest first</option>
+          <option value="available">Available first</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  {% if page.object_list %}
+  <ul class="book-grid" data-book-grid>
+    {% for book in page %}
+    <li class="book-card" data-book-card data-title="{{ book.title|lower }}" data-year="{{ book.published_year|default:'0' }}" data-available="{{ book.available_copies }}" data-saved="false">
+      <div class="cover-wrap" style="--cover-hue: {{ book.category_id|default:forloop.counter|add:'0'|add:'24' }}">
+        <a class="book-cover" href="{% url 'catalog:book_detail' book.pk %}" aria-label="View {{ book.title }}">
+          <img src="https://covers.openlibrary.org/b/isbn/{{ book.isbn }}-M.jpg?default=false" alt="Cover of {{ book.title }}" loading="lazy" data-cover-image>
+          <span class="cover-fallback" aria-hidden="true"><span class="fallback-ornament">✳</span><span class="fallback-title">{{ book.title }}</span><span class="fallback-author">{% for a in book.authors.all %}{{ a.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</span></span>
+        </a>
+        <button class="save-book" type="button" data-save-book aria-label="Save {{ book.title }}" aria-pressed="false"><span aria-hidden="true">♡</span></button>
+      </div>
+      <div class="book-info">
+        {% if book.category %}<p class="book-category">{{ book.category.name }}</p>{% endif %}
+        <h3><a href="{% url 'catalog:book_detail' book.pk %}">{{ book.title }}</a></h3>
+        <p class="book-author">{% for a in book.authors.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+        <div class="book-card-footer">
+          <span class="availability {% if book.is_available %}available{% else %}unavailable{% endif %}">
+            <span class="availability-dot" aria-hidden="true"></span>
+            {% if book.is_available %}{{ book.available_copies }} available{% else %}All borrowed{% endif %}
+          </span>
+          <a class="card-arrow" href="{% url 'catalog:book_detail' book.pk %}" aria-label="View {{ book.title }}">↗</a>
+        </div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="client-empty" data-client-empty hidden>No saved books on this page yet. Tap the heart on a book to keep it close.</p>
+  <nav class="pager" aria-label="Pages">
+    {% if page.has_previous %}<a href="?q={{ q|urlencode }}&amp;category={{ selected_category }}&amp;page={{ page.previous_page_number }}">← Previous</a>{% endif %}
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?q={{ q|urlencode }}&amp;category={{ selected_category }}&amp;page={{ page.next_page_number }}">Next →</a>{% endif %}
+  </nav>
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-illustration" aria-hidden="true">✳</span>
+      <h3>No books found this time.</h3>
+      <p>Try a different title, author, or category to find your next read.</p>
+      <a class="btn" href="{% url 'catalog:book_list' %}">Browse every book</a>
+    </div>
+  {% endif %}
+</section>
 {% endblock %}
+{% block scripts %}<script src="{% static 'js/catalog.js' %}" defer></script>{% endblock %}

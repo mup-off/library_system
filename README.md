@@ -1,16 +1,16 @@
 # Reading Room: Online Library Management System
 
 Django 5 + PostgreSQL. Members browse a catalogue and borrow/return books. Sign-in uses
-**password + emailed one-time code (2FA)**, with lockout, tokenised password reset and a security test suite.
+**email and password**, with failed-login lockout, tokenised password reset and a security test suite.
 Librarians manage books and loans in the Django admin.
 
 ## Project layout
 
 ```
 library_project/   settings.py (env-driven, hardened), urls.py, wsgi/asgi
-accounts/          custom User, EmailOTP, OTP service, login/2FA/reset views, tests.py
+accounts/          custom User, password login, lockout, reset views, tests.py
 catalog/           Author, Category, Book, Loan, borrow/return services, views, admin, tests.py
-templates/ static/ UI (server-rendered, no JS)
+templates/ static/ server-rendered UI and catalogue interactions
 scripts/create_db.sql creates the PostgreSQL user + database
 .env.example       configuration template
 ```
@@ -20,8 +20,6 @@ scripts/create_db.sql creates the PostgreSQL user + database
 ```
 User(id, email UNIQUE(lower), full_name, password(hash), is_active, is_staff, is_superuser,
      failed_login_attempts, locked_until, date_joined, last_login)
-EmailOTP(id, user_id→User, code_hash(HMAC-SHA256), created_at, expires_at, attempts, consumed_at)
-
 Author(id, name UNIQUE)            Category(id, name UNIQUE)
 Book(id, title, isbn UNIQUE[10|13 digits], category_id→Category NULL, description,
      published_year, total_copies, available_copies,  CHECK available_copies <= total_copies)
@@ -97,42 +95,35 @@ The DB user needs `CREATEDB` (Django creates a throwaway `test_library` database
 ## Demonstration steps
 
 1. **Register**: `/accounts/register/`. Try a weak password (`password123`): it is rejected. Use a strong one.
-2. **Password step**: sign in at `/accounts/login/`. You land on "Check your email", **not** logged in yet.
-   Visiting `/` or `/loans/` still bounces you to the login page.
-3. **OTP step**: copy the 6-digit code from your email inbox (or the `runserver` terminal when using
-   the console email backend) and submit it. You're now signed in.
-   - Try a wrong code 5 times: the code is burned and you must sign in again.
-   - Wait 5 minutes (or reuse an old code): rejected. A used code can't be used twice.
-   - "Send a new code" is rate-limited to once per 30 s; a new code invalidates the old one.
-4. **Lockout**: sign out, then enter a wrong password 5 times. Even the right password is refused for 15 min,
+2. **Sign in**: enter your email and password at `/accounts/login/`. Successful sign-in takes you straight to
+   the catalogue (or to the page you originally requested).
+3. **Lockout**: sign out, then enter a wrong password 5 times. Even the right password is refused for 15 min,
    and the message is identical to an unknown-email error (no account enumeration).
-5. **Password reset**: "Forgot your password?" → enter email → open the link from the terminal → set a new
-   password. This also clears any lockout, burns pending OTPs, and signs out other devices.
+4. **Password reset**: "Forgot your password?" → enter email → open the link from the terminal → set a new
+   password. This also clears any lockout and signs out other devices.
    An unknown email gets the exact same on-screen response.
-6. **Borrow & return**: open a book → *Borrow for 14 days*. Check *My loans*. Try borrowing the same
+5. **Borrow & return**: open a book → *Borrow for 14 days*. Check *My loans*. Try borrowing the same
    title twice, or a 6th book: blocked. Return it: stock goes back up.
-7. **Librarian desk**: sign in as the superuser → *Librarian desk* (`/admin/`). Add books/authors,
+6. **Librarian desk**: sign in as the superuser → *Librarian desk* (`/admin/`). Add books/authors,
    view all loans, use the **Mark selected loans as returned** action. Make a normal user staff by ticking
    *is_staff* and granting permissions.
-8. **Overdue fine**: in the admin edit a loan's due date into the past, then view *My loans* as that member.
+7. **Overdue fine**: in the admin edit a loan's due date into the past, then view *My loans* as that member.
 
 ## Security design
 
 | Concern | Control |
 |---|---|
 | Passwords | PBKDF2-SHA256 (salted), 10+ char minimum, common/numeric/similarity validators |
-| 2FA | Password step creates *no* auth session, only a time-boxed "pending" marker (10 min). Login completes only after OTP |
-| OTP | `secrets` CSPRNG, 6 digits, 5-min expiry, single-use, max 5 attempts, 30 s resend cooldown, stored as user-bound HMAC (DB leak ≠ usable codes), constant-time compare |
-| Brute force | Per-account lockout (5 failures → 15 min); OTP exhaustion also counts as a failure; password not checked while locked |
+| Brute force | Per-account lockout (5 failures → 15 min); password is not checked while locked |
 | Enumeration | Same error for unknown email / wrong password / locked; reset page always shows the same confirmation; dummy hash on unknown email to blunt timing |
-| Sessions | Key rotated at password step and at login; HttpOnly, SameSite=Lax, Secure (when `DEBUG=False`); 1 h sliding expiry; password change invalidates all other sessions |
+| Sessions | Key rotated at login; HttpOnly, SameSite=Lax, Secure (when `DEBUG=False`); 1 h sliding expiry; password change invalidates all other sessions |
 | Reset | Django signed tokens, 30 min, single-use (token embeds the old hash) |
 | Web | CSRF on every POST, logout/borrow/return are POST-only, open-redirect-safe `next`, clickjacking/nosniff/referrer headers, HSTS in production, `no-store` on auth pages |
 | Authorization | Login required on all catalogue pages; loans queried by `user=request.user` (IDOR → 404); admin needs `is_staff` |
 | Data integrity | DB constraints (stock ≤ total, one active loan per title), row locks on borrow/return, ORM everywhere (no raw SQL), template auto-escaping |
 | Secrets | All config from environment; app refuses to start without `DJANGO_SECRET_KEY` unless `DEBUG=True` |
 
-Security tests live in `accounts/tests.py` (auth, OTP, lockout, reset, CSRF, headers) and
+Security tests live in `accounts/tests.py` (auth, lockout, reset, CSRF, headers) and
 `catalog/tests.py` (access control, IDOR, business rules).
 
 ## Going to production
@@ -152,4 +143,3 @@ Use real SMTP; restrict PostgreSQL network access; back up the DB.
 - Registration reveals if an email is taken (a usability trade-off); the sign-in and reset paths do not.
 - Password-reset requests are not rate-limited per IP/email.
 - Fines are computed, not collected; there are no reservations/holds or renewal. The `Loan` model and services are the extension points.
-- OTP by email is only as strong as the mailbox; for higher assurance add TOTP/WebAuthn.

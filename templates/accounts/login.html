@@ -3,11 +3,11 @@
 {% block content %}
 <section class="panel narrow">
   <h1>Sign in</h1>
-  <p class="lede">Enter your email and password. We’ll email you a one-time code to finish signing in.</p>
+  <p class="lede">Welcome back. Sign in with your email and password.</p>
   <form method="post" novalidate>{% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
     {% include "accounts/_fields.html" %}
-    <button type="submit" class="btn">Send my code</button>
+    <button type="submit" class="btn">Sign in</button>
   </form>
   <p class="aside"><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a> · <a href="{% url 'accounts:register' %}">Create an account</a></p>
 </section>

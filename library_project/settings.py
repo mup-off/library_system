@@ -100,12 +100,7 @@ PASSWORD_HASHERS = [
 ]
 PASSWORD_RESET_TIMEOUT = 30 * 60  # reset links valid for 30 minutes
 
-# ---------------------------------------------------------------- Two-factor / lockout policy
-OTP_LENGTH = 6
-OTP_TTL_SECONDS = 5 * 60
-OTP_MAX_ATTEMPTS = 5
-OTP_RESEND_COOLDOWN_SECONDS = 30
-PRE_2FA_TTL_SECONDS = 10 * 60  # time allowed between password step and OTP step
+# ---------------------------------------------------------------- Login lockout policy
 LOGIN_MAX_FAILURES = 5
 LOGIN_LOCKOUT_MINUTES = 15
 

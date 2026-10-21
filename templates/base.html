@@ -27,5 +27,6 @@
   {% if messages %}<ul class="messages" role="status">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
   {% block content %}{% endblock %}
 </main>
+{% block scripts %}{% endblock %}
 </body>
 </html>

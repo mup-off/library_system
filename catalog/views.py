@@ -21,6 +21,7 @@ def book_list(request):
     page = Paginator(qs, 12).get_page(request.GET.get("page"))
     return render(request, "catalog/book_list.html", {
         "page": page, "q": q, "categories": Category.objects.all(), "selected_category": cat,
+        "book_count": page.paginator.count,
     })
 
 

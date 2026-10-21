@@ -1,5 +1,4 @@
 from django import forms
-from django.conf import settings
 from django.contrib.auth import password_validation
 
 from .models import User
@@ -43,14 +42,3 @@ class RegistrationForm(forms.ModelForm):
 class LoginForm(forms.Form):
     email = forms.EmailField(widget=forms.EmailInput(attrs={"autocomplete": "username", "autofocus": True}))
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}))
-
-
-class OTPForm(forms.Form):
-    code = forms.RegexField(
-        regex=r"^\d+$",
-        min_length=settings.OTP_LENGTH,
-        max_length=settings.OTP_LENGTH,
-        label="6-digit code",
-        error_messages={"invalid": "Enter the digits from the email only."},
-        widget=forms.TextInput(attrs={"inputmode": "numeric", "autocomplete": "one-time-code", "autofocus": True, "pattern": "[0-9]*"}),
-    )

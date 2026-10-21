@@ -8,8 +8,6 @@ app_name = "accounts"
 urlpatterns = [
     path("register/", views.register, name="register"),
     path("login/", views.login_view, name="login"),
-    path("verify/", views.verify_otp, name="verify_otp"),
-    path("verify/resend/", views.resend_otp, name="resend_otp"),
     path("logout/", views.logout_view, name="logout"),
     # Password reset (Django's tokenised flow; responses never reveal whether an email exists)
     path(

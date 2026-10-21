@@ -19,4 +19,3 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("email", "full_name", "password1", "password2")}),
     )
-    # EmailOTP is intentionally NOT registered: code hashes should not be browsable.
